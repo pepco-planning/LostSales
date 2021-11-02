@@ -1,26 +1,6 @@
 import os
-import re
 
-
-def setUpFolderPath():
-    folderPath = input()
-
-    if not os.path.exists(folderPath):
-        print("Error! Podany folder nie istnieje. Spróbuj ponownie.")
-        folderPath = setUpFolderPath()
-
-    return folderPath
-
-
-def checkEntryFiles(folderPath):
-    requiaredFiles = ["StoreCountryGroup.csv", "GradeCutOff.csv", "GradeSellOff.csv", "DSParam.csv"]
-
-    for file in requiaredFiles:
-        while not(os.path.isfile(folderPath + file)):
-            print("Error! Umieść w folderze plik ", file, " i zatwierdź.")
-            input()
-
-        print("Plik ", file, " jest.")
+# checking if the path is correct
 
 
 def setStartEndWeeks():

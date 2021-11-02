@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-
+import gui
 # import daxDownloader as dd
 # import daxQueries as dq
 # import functions as f
@@ -9,7 +9,7 @@ import numpy as np
 # import datetime
 
 
-print('### Lost Sales ###')
+# print('### Lost Sales ###')
 
 ################### odkomentować przed startem
 # print("Witaj użytkowniku! W celu wyliczenia lost sales podążaj za instrukcjami.")

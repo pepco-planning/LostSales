@@ -1,38 +1,49 @@
 from tkinter import *
 import os
-import time
 
-# checking if the path is correct
+# displaying a text in a TextBox
+def display_text(content):
+    T = Text(root, bg='white', width=30, height=9, font=("Helvetica", 10)) # , padx=8, pady=8
+    T.place(relx=0.65, rely=0.6)
+    T.insert(1.0, content)
+    # T.tag_configure("center", justify="center")
+    T.tag_add("center", 1.0, "end")
+    return T
+
 def check_path(p):
     folderPath = p
 
     if not os.path.exists(folderPath):
-        ans = "Error! Podany folder nie istnieje. Spróbuj ponownie."
-        display_text(ans)
-        time.sleep(3)
+        display_text("Error! \n\nThe chosen directory does not exist \n\nPlease try type the folder path again")
         folderPath = check_path()
-    ans = "Wszystko jest ok."
-    display_text(ans)
-    # requiaredFiles = ["StoreCountryGroup.csv", "GradeCutOff.csv", "GradeSellOff.csv", "DSParam.csv"]
-    # for file in requiaredFiles:
-    #     while not(os.path.isfile(folderPath + file)):
-    #         print("Error! Umieść w folderze plik ", file, " i zatwierdź.")
-    #         input()
-    #
-    #     print("Plik ", file, " jest.")
-    #
-    # return folderPath
 
-def display_text(content):
-    T = Text(root, bg='white', width=20, height=5.5, font=10, padx=10, pady=10)
-    T.place(relx=0.65, rely=0.65)
-    T.insert(1.0, content)
-    T.tag_configure("center", justify="center")
-    T.tag_add("center", 1.0, "end")
+    requiaredFiles = ["StoreCountryGroup.csv", "GradeCutOff.csv", "GradeSellOff.csv", "DS_PARAM.csv"]
+    text1 = ""
+
+    for file in requiaredFiles:
+        if not(os.path.isfile(folderPath + file)):
+            text1 = text1 + file + ', \n'
+    if text1 == "":
+        display_text("\nEverything looks fine. \n\nYou can click on \n'Submit' button")
+    else:
+        display_text(f"Missing files: \n\n{text1}")
+
+    return folderPath
+# Instruction
+model_description = "'Folder path': \nWhere do you keep input files.\n" \
+                    "Example: 'c:\Mariusz\MyProjects\LostSales\input files'\n\n" \
+                    "'Database file name': \nA name of the database file\n" \
+                    "Example: 'StockAndSales_PQ1.zip'\n\n" \
+                    "'Download db': \nDo you have a .csv database file or you are going to download a new one?\n\n" \
+                    "'check' button: \nThe button is checking whether the chosen path is correct and if it contains all of the necessary files"
 
 root = Tk()
 root.geometry('800x500')
 root.title("Lost Sales Model")
+
+def setTextInput(text):
+    entry_4.delete(0,"end")
+    entry_4.insert(0, text)
 
 #TITLE##############
 label_0 = Label(root, text="Lost Sales", width=20, font=("bold", 20))
@@ -56,8 +67,13 @@ entry_2.place(x=240, y=180)
 label_3 = Label(root, text="Download db", width=20, anchor='e', font=("bold", 10))
 label_3.place(x=70,y=230)
 var = IntVar()
-Radiobutton(root, text="Yes", padx = 5, variable=var, value=1).place(x=235, y=230)
-Radiobutton(root, text="No", padx = 20, variable=var, value=2).place(x=290, y=230)
+Radiobutton(root, text="Yes", padx = 5, variable=var, value=1, command=lambda:setTextInput("Please type here a date you choose. (Eg.: 'Y2021W01', 'Y2021W04')")).place(x=235, y=230)
+Radiobutton(root, text="No", padx = 20, variable=var, value=2, command=lambda:setTextInput("No need a date")).place(x=290, y=230)
+
+label_4 = Label(root, text="Database dates", width=20, anchor='e', font=("bold", 10))
+label_4.place(x=65, y=280)
+entry_4 = Entry(root, textvariable='Yes', width=60)
+entry_4.place(x=240, y=280)
 
 # label_4 = Label(root, text="country",width=20,font=("bold", 10))
 # label_4.place(x=70,y=280)
@@ -80,7 +96,8 @@ Radiobutton(root, text="No", padx = 20, variable=var, value=2).place(x=290, y=23
 submit_btn = Button(root, text='Submit', width=20, bg='brown', fg='white')
 submit_btn.place(relx=0.5, rely=0.8, anchor='center') # x=180,y=380
 
-help_btn = Button(root, text="Instruction", width=20, bg='light grey', fg='black') # command=query
+help_btn = Button(root, text="Instruction", width=20, bg='light grey', fg='black', command=lambda:[display_text(model_description)]) # command=query
 help_btn.place(relx=0.5, rely=0.7, anchor='center')
+
 
 root.mainloop()
