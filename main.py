@@ -25,10 +25,16 @@ print('### Lost Sales ###')
 # storeCountryGroup = pd.read_csv(storeCountryGroup_path)
 # cutOff = pd.read_csv(gradeCutOff_path)
 
+# folderPath = r"\\10.2.5.140\zasoby\Planowanie\PERSONAL FOLDERS\Mariusz Borycki\Python Projects\LostSales\input files"
+
+# df = pd.read_excel('c:\Mariusz\MyProjects\LostSales\Lost Sales Model.xlsm', sheet_name='Sheet1')
+# folderPath = df.iloc[0,1]
+# file_name = df.iloc[0,2]
+# stockAndSales_path = f"{folderPath}\{file_name}"
+
 folderPath = r"\\10.2.5.140\zasoby\Planowanie\PERSONAL FOLDERS\Mariusz Borycki\Python Projects\LostSales\input files"
 stockAndSales_path = folderPath + '/StockAndSales_PQ1.zip'
 stockAndSales = pd.read_csv(stockAndSales_path, compression='zip')
-
 # -Calculations--------------------------------------------
 stockAndSales.rename(columns={'StrNumber':'Store', 'SalesValue':'SalesR', 'SalesQty':'SalesQ', 'StockQty':'StockQ'}, inplace=True)
 
