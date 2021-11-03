@@ -78,66 +78,69 @@ model_description = "'Folder path': \nWhere do you keep input files.\n" \
                     "'check' button: \nThe button is checking whether the chosen path is correct and if it contains all of the necessary files"
 
 def calculation(folder):
-    msb.showinfo("Information", "Wait a bit. The Model is running")
+    MsgBox = msb.askquestion('Exit Application', 'Are you sure you want to exit the application',
+                                       icon='warning')
+    if MsgBox == 'yes':
+        stockAndSales = pd.read_csv(folder, compression='zip')
+        # -Calculations--------------------------------------------
+        stockAndSales.rename(
+            columns={'StrNumber': 'Store', 'SalesValue': 'SalesR', 'SalesQty': 'SalesQ', 'StockQty': 'StockQ'},
+            inplace=True)
 
-    stockAndSales = pd.read_csv(folder, compression='zip')
-    # -Calculations--------------------------------------------
-    stockAndSales.rename(
-        columns={'StrNumber': 'Store', 'SalesValue': 'SalesR', 'SalesQty': 'SalesQ', 'StockQty': 'StockQ'},
-        inplace=True)
+        # make sure you can do this:
+        stockAndSales = stockAndSales[(stockAndSales['SalesR'] > 0) & (stockAndSales['SalesQ'] > 0)]
+        stockAndSales['StockQ'] = stockAndSales['StockQ'].apply(lambda x: 0 if x < 0 else x)
 
-    # make sure you can do this:
-    stockAndSales = stockAndSales[(stockAndSales['SalesR'] > 0) & (stockAndSales['SalesQ'] > 0)]
-    stockAndSales['StockQ'] = stockAndSales['StockQ'].apply(lambda x: 0 if x < 0 else x)
+        # -Total Sales per Category/Store--------------------------
+        temp = stockAndSales.groupby(['CategoryID', 'Store']).agg({'SalesR': 'sum', 'SalesQ': 'sum'}).reset_index()
+        temp.rename({'SalesR': 'Total_CatSalesR', 'SalesQ': 'Total_CatSalesQ'}, axis=1, inplace=True)
+        stockAndSales = pd.merge(stockAndSales, temp, on=['CategoryID', 'Store'], how='left').sort_values(
+            by=['Store', 'CategoryID'])
+        del temp
 
-    # -Total Sales per Category/Store--------------------------
-    temp = stockAndSales.groupby(['CategoryID', 'Store']).agg({'SalesR': 'sum', 'SalesQ': 'sum'}).reset_index()
-    temp.rename({'SalesR': 'Total_CatSalesR', 'SalesQ': 'Total_CatSalesQ'}, axis=1, inplace=True)
-    stockAndSales = pd.merge(stockAndSales, temp, on=['CategoryID', 'Store'], how='left').sort_values(
-        by=['Store', 'CategoryID'])
-    del temp
+        # -Total Sales per Store-----------------------------------
+        temp = stockAndSales.groupby(['Store']).agg({'SalesR': 'sum'}).reset_index()
+        temp.rename({'SalesR': 'Total_StoreSalesR'}, axis=1, inplace=True)
+        stockAndSales = pd.merge(stockAndSales, temp, on=['Store'], how='left').sort_values(by=['Store', 'CategoryID'])
+        del temp
 
-    # -Total Sales per Store-----------------------------------
-    temp = stockAndSales.groupby(['Store']).agg({'SalesR': 'sum'}).reset_index()
-    temp.rename({'SalesR': 'Total_StoreSalesR'}, axis=1, inplace=True)
-    stockAndSales = pd.merge(stockAndSales, temp, on=['Store'], how='left').sort_values(by=['Store', 'CategoryID'])
-    del temp
+        # -Aggregation---------------------------------------------
+        stockAndSales['SalesAUP'] = stockAndSales.SalesR / stockAndSales.SalesQ
+        stockAndSales['Total_SalesAUP'] = stockAndSales.Total_CatSalesR / stockAndSales.Total_CatSalesQ
+        stockAndSales['SellOff'] = stockAndSales.SalesQ / (stockAndSales.StockQ + stockAndSales.SalesQ)
 
-    # -Aggregation---------------------------------------------
-    stockAndSales['SalesAUP'] = stockAndSales.SalesR / stockAndSales.SalesQ
-    stockAndSales['Total_SalesAUP'] = stockAndSales.Total_CatSalesR / stockAndSales.Total_CatSalesQ
-    stockAndSales['SellOff'] = stockAndSales.SalesQ / (stockAndSales.StockQ + stockAndSales.SalesQ)
+        stockAndSales['CatSalesRatio'] = stockAndSales.Total_CatSalesR / stockAndSales.Total_StoreSalesR  # Profiles
+        stockAndSales['WeekSalesRatio'] = stockAndSales.SalesR / stockAndSales.Total_CatSalesR  # Profiles_Sales Ratio
 
-    stockAndSales['CatSalesRatio'] = stockAndSales.Total_CatSalesR / stockAndSales.Total_StoreSalesR  # Profiles
-    stockAndSales['WeekSalesRatio'] = stockAndSales.SalesR / stockAndSales.Total_CatSalesR  # Profiles_Sales Ratio
+        # -Temporary added manually--------------------------------
+        stockAndSales['DesiredSellOff'] = 0.15
+        stockAndSales['MLQ'] = 120
+        stockAndSales['IncreaseFactor'] = 0.10
 
-    # -Temporary added manually--------------------------------
-    stockAndSales['DesiredSellOff'] = 0.15
-    stockAndSales['MLQ'] = 120
-    stockAndSales['IncreaseFactor'] = 0.10
+        # -Final Calculations--------------------------------------
+        stockAndSales['s1'] = np.where(stockAndSales.SellOff > stockAndSales.DesiredSellOff, 1,
+                                       np.where(stockAndSales.StockQ <= stockAndSales.MLQ, 1, 0))
+        stockAndSales['s2'] = np.where(stockAndSales.s1 == 1,
+                                       np.where(stockAndSales.WeekSalesRatio - stockAndSales.CatSalesRatio > 0, 1, 0), 0)
+        stockAndSales['s2'] = np.where(stockAndSales.s1 == 1,
+                                       np.where(stockAndSales.WeekSalesRatio - stockAndSales.CatSalesRatio > 0, 1, 0), 0)
 
-    # -Final Calculations--------------------------------------
-    stockAndSales['s1'] = np.where(stockAndSales.SellOff > stockAndSales.DesiredSellOff, 1,
-                                   np.where(stockAndSales.StockQ <= stockAndSales.MLQ, 1, 0))
-    stockAndSales['s2'] = np.where(stockAndSales.s1 == 1,
-                                   np.where(stockAndSales.WeekSalesRatio - stockAndSales.CatSalesRatio > 0, 1, 0), 0)
-    stockAndSales['s2'] = np.where(stockAndSales.s1 == 1,
-                                   np.where(stockAndSales.WeekSalesRatio - stockAndSales.CatSalesRatio > 0, 1, 0), 0)
+        stockAndSales['ConditionCalc'] = np.where(stockAndSales.s2 == 0, stockAndSales.SalesR, 0)
+        stockAndSales['ConditionMix'] = np.where(stockAndSales.s2 == 0, stockAndSales.WeekSalesRatio, 0)
+        stockAndSales['SalesAdjusted'] = stockAndSales.ConditionCalc / stockAndSales.ConditionMix
+        stockAndSales['SalesAdjusted'].fillna(0, inplace=True)
 
-    stockAndSales['ConditionCalc'] = np.where(stockAndSales.s2 == 0, stockAndSales.SalesR, 0)
-    stockAndSales['ConditionMix'] = np.where(stockAndSales.s2 == 0, stockAndSales.WeekSalesRatio, 0)
-    stockAndSales['SalesAdjusted'] = stockAndSales.ConditionCalc / stockAndSales.ConditionMix
-    stockAndSales['SalesAdjusted'].fillna(0, inplace=True)
+        stockAndSales['s3_Ret'] = np.where(stockAndSales.s2 == 0, 0,
+                                           stockAndSales.WeekSalesRatio * stockAndSales.SalesAdjusted - stockAndSales.SalesR)
+        stockAndSales['s4_Ret'] = np.where(stockAndSales.s1 == 1,
+                                           np.where(stockAndSales.WeekSalesRatio - stockAndSales.CatSalesRatio < 0,
+                                                    stockAndSales.SalesR * stockAndSales.IncreaseFactor, 0), 0)
+        stockAndSales['s4_Q'] = (stockAndSales.s3_Ret + stockAndSales.s4_Ret) / np.where(stockAndSales.SalesAUP == 0,
+                                                                                         stockAndSales.Total_SalesAUP,
+                                                                                         stockAndSales.SalesAUP)
 
-    stockAndSales['s3_Ret'] = np.where(stockAndSales.s2 == 0, 0,
-                                       stockAndSales.WeekSalesRatio * stockAndSales.SalesAdjusted - stockAndSales.SalesR)
-    stockAndSales['s4_Ret'] = np.where(stockAndSales.s1 == 1,
-                                       np.where(stockAndSales.WeekSalesRatio - stockAndSales.CatSalesRatio < 0,
-                                                stockAndSales.SalesR * stockAndSales.IncreaseFactor, 0), 0)
-    stockAndSales['s4_Q'] = (stockAndSales.s3_Ret + stockAndSales.s4_Ret) / np.where(stockAndSales.SalesAUP == 0,
-                                                                                     stockAndSales.Total_SalesAUP,
-                                                                                     stockAndSales.SalesAUP)
-
-    folderPath = 'c:\Mariusz\MyProjects\LostSales\input files\\'
-    stockAndSales.head().to_csv(folderPath + 'final_df.csv', index=False)
-    msb.showinfo("Information", f"The Model is ready.\nFolder:\n{folderPath}\nFile:\n'final_df.csv'")
+        folderPath = 'c:\Mariusz\MyProjects\LostSales\input files\\'
+        stockAndSales.head().to_csv(folderPath + 'final_df.csv', index=False)
+        msb.showinfo("Information", f"The Model is ready.\nFolder:\n{folderPath}\nFile:\n'final_df.csv'")
+    else:
+        msb.showinfo('Return', 'You will now return to the application screen')
