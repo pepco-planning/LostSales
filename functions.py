@@ -3,9 +3,6 @@ from tkinter import *
 import pandas as pd
 import numpy as np
 from tkinter import messagebox as msb
-import time
-# checking if the path is correct
-
 
 def setStartEndWeeks():
     return ['Y2021W01', 'Y2021W04']
@@ -31,8 +28,10 @@ def setStartEndWeeks():
     #
     # return startEndWeeks
 
-# displaying a text in a TextBox
 def display_text(master, content):
+    """
+    This function is displaying a text in a TextBox
+    """
     infoField = Text(master, bg='light grey', width=50, height=6, font=("Helvetica", 10)) # , padx=8, pady=8
     infoField.place(relx=0.4, rely=0.75)
     infoField.insert(1.0, content)
@@ -41,6 +40,14 @@ def display_text(master, content):
     return infoField
 
 def check_path(master, folderPath, fileName):
+    """
+    This function is checking whether a chosen file name
+    exists in the typed path
+    :param master: it is a 'root' from tkinter. It might be called differently but usually we use 'master' name
+    :param folderPath: path where we keep required input files and the one from fileName (database)
+    :param fileName: a database file name (for a file already downloaded or for the fill we are going to download)
+    :return: one line with folderPath and fileName (folderPath + fileName)
+    """
     if len(fileName) < 1:
         fileName = 'no_file'
 
@@ -66,10 +73,15 @@ def check_path(master, folderPath, fileName):
     return dirPath
 
 def setTextInput(text, e4):
+    """
+    A function which is changing comment/information for a user
+    The info is placed in one label created for dates
+    :param text: the text is written manually in the main.py
+    :param e4: means entry4 - name of the tkinter.Entry field
+    """
     e4.delete(0,"end")
     e4.insert(0, text)
 
-# Instruction
 model_description = "'Folder path': \nWhere do you keep input files.\n" \
                     "Example: 'c:\Mariusz\MyProjects\LostSales\input files'\n\n" \
                     "'Database file name': \nA name of the database file\n" \
@@ -78,6 +90,11 @@ model_description = "'Folder path': \nWhere do you keep input files.\n" \
                     "'check' button: \nThe button is checking whether the chosen path is correct and if it contains all of the necessary files"
 
 def calculation(folder):
+    """
+    Function which calculates required numbers based on the database file we use
+    :param folder:
+    :return:
+    """
     MsgBox = msb.askquestion('Exit Application', 'Are you sure you want to exit the application',
                                        icon='warning')
     if MsgBox == 'yes':

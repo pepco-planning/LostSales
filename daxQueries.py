@@ -50,7 +50,6 @@ def stockAndSales(daxWeek):
                 )
     """
 
-
 def sales(daxWeek):
     return """
             EVALUATE
@@ -95,7 +94,6 @@ def sales(daxWeek):
             )
     """
 
-
 def stock(daxWeek):
     return """
         EVALUATE         
@@ -135,7 +133,6 @@ def stock(daxWeek):
         [Closing Stock on Hand Qty dcssd]
         )        
     """
-
 
 def weeks(startEndWeeks):
     daxStartWeek = startEndWeeks[0][1:5] + startEndWeeks[0][6:8]
