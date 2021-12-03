@@ -3,6 +3,7 @@ from tkinter import *
 import pandas as pd
 import numpy as np
 from tkinter import messagebox as msb
+import StockAndSales as ss
 
 def setStartEndWeeks():
     return ['Y2021W01', 'Y2021W04']
@@ -72,15 +73,38 @@ def check_path(master, folderPath, fileName):
 
     return dirPath
 
-def setTextInput(text, e4):
+def setTextInput(entryDates, entryFileName, infoField, value):
     """
     A function which is changing comment/information for a user
     The info is placed in one label created for dates
     :param text: the text is written manually in the main.py
     :param e4: means entry4 - name of the tkinter.Entry field
     """
-    e4.delete(0,"end")
-    e4.insert(0, text)
+    text1 = "No need to type a 'Database File Name' field"
+    text2 = "No need to type a 'Database Dates' field"
+    text3 = "Please type to 'Database dates' field a chosen date. \n(Eg.: 'Y2021W01', 'Y2021W04')"
+    text4 = "Please type to 'Database File Name' field \na dataset file name."
+
+    if value == 1:
+        entryDates.config(bg='white',fg='black')
+        entryDates.delete(0, "end")
+
+        entryFileName.delete(0, "end")
+        entryFileName.config(bg='light grey', fg='grey')
+        entryFileName.insert(0, "No need a file name")
+
+        infoField.delete(1.0, "end")
+        infoField.insert(1.0, text3)
+    else:
+        entryDates.delete(0, "end")
+        entryDates.config(bg='light grey', fg='grey')
+        entryDates.insert(0, text2)
+
+        entryFileName.delete(0, "end")
+        entryFileName.config(bg='white',fg='black')
+
+        infoField.delete(1.0, "end")
+        infoField.insert(1.0, text4)
 
 model_description = "'Folder path': \nWhere do you keep input files.\n" \
                     "Example: 'c:\Mariusz\MyProjects\LostSales\input files'\n\n" \
@@ -89,75 +113,90 @@ model_description = "'Folder path': \nWhere do you keep input files.\n" \
                     "'Download db': \nDo you have a .csv database file or you are going to download a new one?\n\n" \
                     "'check' button: \nThe button is checking whether the chosen path is correct and if it contains all of the necessary files"
 
-def calculation(folder):
+def calculation(filePath, fileName, weeks, load_data):
     """
     Function which calculates required numbers based on the database file we use
-    :param folder:
+    :param filePath:
+    :param fileName:
+    :param weeks:
+    :load_data:
     :return:
     """
-    MsgBox = msb.askquestion('Exit Application', 'Are you sure you want to exit the application',
-                                       icon='warning')
-    if MsgBox == 'yes':
-        stockAndSales = pd.read_csv(folder, compression='zip')
-        # -Calculations--------------------------------------------
-        stockAndSales.rename(
-            columns={'StrNumber': 'Store', 'SalesValue': 'SalesR', 'SalesQty': 'SalesQ', 'StockQty': 'StockQ'},
-            inplace=True)
-
-        # make sure you can do this:
-        stockAndSales = stockAndSales[(stockAndSales['SalesR'] > 0) & (stockAndSales['SalesQ'] > 0)]
-        stockAndSales['StockQ'] = stockAndSales['StockQ'].apply(lambda x: 0 if x < 0 else x)
-
-        # -Total Sales per Category/Store--------------------------
-        temp = stockAndSales.groupby(['CategoryID', 'Store']).agg({'SalesR': 'sum', 'SalesQ': 'sum'}).reset_index()
-        temp.rename({'SalesR': 'Total_CatSalesR', 'SalesQ': 'Total_CatSalesQ'}, axis=1, inplace=True)
-        stockAndSales = pd.merge(stockAndSales, temp, on=['CategoryID', 'Store'], how='left').sort_values(
-            by=['Store', 'CategoryID'])
-        del temp
-
-        # -Total Sales per Store-----------------------------------
-        temp = stockAndSales.groupby(['Store']).agg({'SalesR': 'sum'}).reset_index()
-        temp.rename({'SalesR': 'Total_StoreSalesR'}, axis=1, inplace=True)
-        stockAndSales = pd.merge(stockAndSales, temp, on=['Store'], how='left').sort_values(by=['Store', 'CategoryID'])
-        del temp
-
-        # -Aggregation---------------------------------------------
-        stockAndSales['SalesAUP'] = stockAndSales.SalesR / stockAndSales.SalesQ
-        stockAndSales['Total_SalesAUP'] = stockAndSales.Total_CatSalesR / stockAndSales.Total_CatSalesQ
-        stockAndSales['SellOff'] = stockAndSales.SalesQ / (stockAndSales.StockQ + stockAndSales.SalesQ)
-
-        stockAndSales['CatSalesRatio'] = stockAndSales.Total_CatSalesR / stockAndSales.Total_StoreSalesR  # Profiles
-        stockAndSales['WeekSalesRatio'] = stockAndSales.SalesR / stockAndSales.Total_CatSalesR  # Profiles_Sales Ratio
-
-        # -Temporary added manually--------------------------------
-        stockAndSales['DesiredSellOff'] = 0.15
-        stockAndSales['MLQ'] = 120
-        stockAndSales['IncreaseFactor'] = 0.10
-
-        # -Final Calculations--------------------------------------
-        stockAndSales['s1'] = np.where(stockAndSales.SellOff > stockAndSales.DesiredSellOff, 1,
-                                       np.where(stockAndSales.StockQ <= stockAndSales.MLQ, 1, 0))
-        stockAndSales['s2'] = np.where(stockAndSales.s1 == 1,
-                                       np.where(stockAndSales.WeekSalesRatio - stockAndSales.CatSalesRatio > 0, 1, 0), 0)
-        stockAndSales['s2'] = np.where(stockAndSales.s1 == 1,
-                                       np.where(stockAndSales.WeekSalesRatio - stockAndSales.CatSalesRatio > 0, 1, 0), 0)
-
-        stockAndSales['ConditionCalc'] = np.where(stockAndSales.s2 == 0, stockAndSales.SalesR, 0)
-        stockAndSales['ConditionMix'] = np.where(stockAndSales.s2 == 0, stockAndSales.WeekSalesRatio, 0)
-        stockAndSales['SalesAdjusted'] = stockAndSales.ConditionCalc / stockAndSales.ConditionMix
-        stockAndSales['SalesAdjusted'].fillna(0, inplace=True)
-
-        stockAndSales['s3_Ret'] = np.where(stockAndSales.s2 == 0, 0,
-                                           stockAndSales.WeekSalesRatio * stockAndSales.SalesAdjusted - stockAndSales.SalesR)
-        stockAndSales['s4_Ret'] = np.where(stockAndSales.s1 == 1,
-                                           np.where(stockAndSales.WeekSalesRatio - stockAndSales.CatSalesRatio < 0,
-                                                    stockAndSales.SalesR * stockAndSales.IncreaseFactor, 0), 0)
-        stockAndSales['s4_Q'] = (stockAndSales.s3_Ret + stockAndSales.s4_Ret) / np.where(stockAndSales.SalesAUP == 0,
-                                                                                         stockAndSales.Total_SalesAUP,
-                                                                                         stockAndSales.SalesAUP)
-
-        folderPath = 'c:\Mariusz\MyProjects\LostSales\input files\\'
-        stockAndSales.head().to_csv(folderPath + 'final_df.csv', index=False)
-        msb.showinfo("Information", f"The Model is ready.\nFolder:\n{folderPath}\nFile:\n'final_df.csv'")
+    if load_data == 1:
+        MsgBox = msb.askquestion('Exit Application', f'Are you sure you want to download a new dataset for {weeks}?',
+                                 icon='warning')
     else:
-        msb.showinfo('Return', 'You will now return to the application screen')
+        MsgBox = msb.askquestion('Exit Application', f'Are you sure you want to run the model based on the {fileName} dataset?',
+                                 icon='warning')
+
+    dirPath = filePath + fileName
+
+    if MsgBox == 'yes':
+        if load_data == 1:
+            print("pobieranie danych")
+            ss.stockAndSales_toCSV(filePath, weeks)
+        else:
+            print("Plik db w uzyciu")
+            stockAndSales = pd.read_csv(dirPath, compression='zip')
+            # -Calculations--------------------------------------------
+            stockAndSales.rename(
+                columns={'StrNumber': 'Store', 'SalesValue': 'SalesR', 'SalesQty': 'SalesQ', 'StockQty': 'StockQ'},
+                inplace=True)
+
+            # make sure you can do this:
+            stockAndSales = stockAndSales[(stockAndSales['SalesR'] > 0) & (stockAndSales['SalesQ'] > 0)]
+            stockAndSales['StockQ'] = stockAndSales['StockQ'].apply(lambda x: 0 if x < 0 else x)
+
+            # -Total Sales per Category/Store--------------------------
+            temp = stockAndSales.groupby(['CategoryID', 'Store']).agg({'SalesR': 'sum', 'SalesQ': 'sum'}).reset_index()
+            temp.rename({'SalesR': 'Total_CatSalesR', 'SalesQ': 'Total_CatSalesQ'}, axis=1, inplace=True)
+            stockAndSales = pd.merge(stockAndSales, temp, on=['CategoryID', 'Store'], how='left').sort_values(
+                by=['Store', 'CategoryID'])
+            del temp
+
+            # -Total Sales per Store-----------------------------------
+            temp = stockAndSales.groupby(['Store']).agg({'SalesR': 'sum'}).reset_index()
+            temp.rename({'SalesR': 'Total_StoreSalesR'}, axis=1, inplace=True)
+            stockAndSales = pd.merge(stockAndSales, temp, on=['Store'], how='left').sort_values(by=['Store', 'CategoryID'])
+            del temp
+
+            # -Aggregation---------------------------------------------
+            stockAndSales['SalesAUP'] = stockAndSales.SalesR / stockAndSales.SalesQ
+            stockAndSales['Total_SalesAUP'] = stockAndSales.Total_CatSalesR / stockAndSales.Total_CatSalesQ
+            stockAndSales['SellOff'] = stockAndSales.SalesQ / (stockAndSales.StockQ + stockAndSales.SalesQ)
+
+            stockAndSales['CatSalesRatio'] = stockAndSales.Total_CatSalesR / stockAndSales.Total_StoreSalesR  # Profiles
+            stockAndSales['WeekSalesRatio'] = stockAndSales.SalesR / stockAndSales.Total_CatSalesR  # Profiles_Sales Ratio
+
+            # -Temporary added manually--------------------------------
+            stockAndSales['DesiredSellOff'] = 0.15
+            stockAndSales['MLQ'] = 120
+            stockAndSales['IncreaseFactor'] = 0.10
+
+            # -Final Calculations--------------------------------------
+            stockAndSales['s1'] = np.where(stockAndSales.SellOff > stockAndSales.DesiredSellOff, 1,
+                                           np.where(stockAndSales.StockQ <= stockAndSales.MLQ, 1, 0))
+            stockAndSales['s2'] = np.where(stockAndSales.s1 == 1,
+                                           np.where(stockAndSales.WeekSalesRatio - stockAndSales.CatSalesRatio > 0, 1, 0), 0)
+            stockAndSales['s2'] = np.where(stockAndSales.s1 == 1,
+                                           np.where(stockAndSales.WeekSalesRatio - stockAndSales.CatSalesRatio > 0, 1, 0), 0)
+
+            stockAndSales['ConditionCalc'] = np.where(stockAndSales.s2 == 0, stockAndSales.SalesR, 0)
+            stockAndSales['ConditionMix'] = np.where(stockAndSales.s2 == 0, stockAndSales.WeekSalesRatio, 0)
+            stockAndSales['SalesAdjusted'] = stockAndSales.ConditionCalc / stockAndSales.ConditionMix
+            stockAndSales['SalesAdjusted'].fillna(0, inplace=True)
+
+            stockAndSales['s3_Ret'] = np.where(stockAndSales.s2 == 0, 0,
+                                               stockAndSales.WeekSalesRatio * stockAndSales.SalesAdjusted - stockAndSales.SalesR)
+            stockAndSales['s4_Ret'] = np.where(stockAndSales.s1 == 1,
+                                               np.where(stockAndSales.WeekSalesRatio - stockAndSales.CatSalesRatio < 0,
+                                                        stockAndSales.SalesR * stockAndSales.IncreaseFactor, 0), 0)
+            stockAndSales['s4_Q'] = (stockAndSales.s3_Ret + stockAndSales.s4_Ret) / np.where(stockAndSales.SalesAUP == 0,
+                                                                                             stockAndSales.Total_SalesAUP,
+                                                                                             stockAndSales.SalesAUP)
+
+            folderPath = 'c:\Mariusz\MyProjects\LostSales\input files\\'
+            stockAndSales.head().to_csv(folderPath + 'final_df.csv', index=False)
+            msb.showinfo("Information", f"The Model is ready.\nFolder:\n{folderPath}\nFile:\n'final_df.csv'")
+    else:
+        msb.showinfo('Return', 'Returning to the application screen')

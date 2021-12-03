@@ -17,11 +17,16 @@ choices = """
 
 
 def stockAndSales_toCSV(filePath, weeks):
-    tqdmLoop = tqdm.tqdm(weeks[0])
-    for week in tqdmLoop:
-        tqdmLoop.set_description("Pobierany tydzień %s" % week)
+    #tqdmLoop = tqdm.tqdm(weeks[0])
+    #weeks = list(weeks)
+    weeks_list = weeks.split()
+
+    for week in weeks_list:
+        #tqdmLoop.set_description("Pobierany tydzień %s" % week)
+        w = week.split(',')[0]
+        print(f"Week: {w}")
         try:
-            stockAndSales = dd.dataFrameFromTabular(dq.stockAndSales(week))
+            stockAndSales = dd.dataFrameFromTabular(dq.stockAndSales(w))
             stockAndSales.fillna(0, inplace=True)
             stockAndSales.to_csv(filePath, header=False, index=False, mode="a+")
         except:
